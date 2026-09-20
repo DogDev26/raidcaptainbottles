@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "raidcaptainbottles",
+  "version": "${version}",
+  "name": "Raid Captain Bottles",
+  "description": "Raid captains always drop an Ominous Bottle when killed by a player - even mid-raid - no matter which illager type is carrying the banner.",
+  "authors": [
+    "you"
+  ],
+  "contact": {},
+  "license": "CC0-1.0",
+  "environment": "server",
+  "entrypoints": {
+    "main": [
+      "com.example.raidcaptainbottles.RaidCaptainBottles"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "26.1.2",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}

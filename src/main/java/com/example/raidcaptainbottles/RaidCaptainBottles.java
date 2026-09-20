@@ -15,17 +15,6 @@ import net.minecraft.world.item.component.OminousBottleAmplifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * As of the "ominous bottle" rework, a raid captain (pillager, vindicator,
- * evoker or illusioner - whichever is carrying the ominous banner) already
- * drops an Ominous Bottle when a player kills it OUTSIDE an active raid.
- * That vanilla path is left completely untouched here.
- *
- * The one gap in vanilla is: a captain killed WHILE an active raid is
- * happening does not drop a bottle. This mod fills in exactly that gap,
- * for every raider type that can be a captain, so you always get a bottle
- * no matter which illager happened to be carrying the banner.
- */
 public final class RaidCaptainBottles implements ModInitializer {
     public static final String MOD_ID = "raidcaptainbottles";
     private static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
@@ -33,25 +22,33 @@ public final class RaidCaptainBottles implements ModInitializer {
     @Override
     public void onInitialize() {
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
-            // Only raid captains (Raider covers pillager/vindicator/evoker/illusioner).
-            if (!(entity instanceof Raider raider) || !raider.isPatrolLeader()) {
+            if (!(entity instanceof Raider raider)) {
                 return;
             }
 
-            // Only count kills credited to a player (directly or via arrows/etc).
+            LOGGER.info("[raidcaptainbottles] {} died. isPatrolLeader={}", raider.getType(), raider.isPatrolLeader());
+
+            if (!raider.isPatrolLeader()) {
+                LOGGER.info("[raidcaptainbottles] -> skipped: not a patrol leader at death time");
+                return;
+            }
+
             Entity attacker = damageSource.getEntity();
+            LOGGER.info("[raidcaptainbottles] attacker={}", attacker);
             if (!(attacker instanceof ServerPlayer)) {
+                LOGGER.info("[raidcaptainbottles] -> skipped: killer was not a player");
                 return;
             }
 
             if (!(entity.level() instanceof ServerLevel serverLevel)) {
+                LOGGER.info("[raidcaptainbottles] -> skipped: not a ServerLevel");
                 return;
             }
 
-            // If there's no active raid here, vanilla already handled the
-            // bottle drop itself - don't double it up.
             Raid raid = serverLevel.getRaidAt(entity.blockPosition());
+            LOGGER.info("[raidcaptainbottles] getRaidAt result: {}", raid);
             if (raid == null) {
+                LOGGER.info("[raidcaptainbottles] -> skipped: no raid found at death position (vanilla should have dropped it instead)");
                 return;
             }
 
@@ -67,8 +64,7 @@ public final class RaidCaptainBottles implements ModInitializer {
             itemEntity.setDefaultPickUpDelay();
             serverLevel.addFreshEntity(itemEntity);
 
-            LOGGER.debug("{} dropped an ominous bottle (amplifier {}) after being killed mid-raid",
-                    raider.getType(), amplifier);
+            LOGGER.info("[raidcaptainbottles] -> DROPPED ominous bottle, amplifier {}", amplifier);
         });
     }
 }

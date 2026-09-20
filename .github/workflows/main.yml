@@ -1,29 +1,57 @@
-name: Build Plugin
+name: Build
 
 on:
   push:
-    branches: [ main, master ]
-  workflow_dispatch: {}
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '25'
-          cache: maven
+          java-version: "25"
 
-      - name: Build with Maven
-        run: mvn -B clean package
+      # Handles Gradle install + dependency/build caching.
+      # gradle-version is ignored when a wrapper is present.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
 
-      - name: Upload jar
+      - name: Build
+        run: |
+          if [ -x ./gradlew ]; then
+            ./gradlew build --stacktrace
+          else
+            gradle build --stacktrace
+          fi
+
+      - name: Upload jars
         uses: actions/upload-artifact@v4
         with:
-          name: RaidCaptainBottles
-          path: target/RaidCaptainBottles.jar
+          name: raidcaptainbottles-jars
+          path: |
+            build/libs/*.jar
+            !build/libs/*-dev.jar
+          if-no-files-found: error
+
+      - name: Publish release on tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/libs/*.jar
+          generate_release_notes: true
